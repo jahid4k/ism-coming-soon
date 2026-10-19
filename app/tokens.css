@@ -1,0 +1,110 @@
+/*
+  DESIGN TOKENS
+  One file holds the whole look. If your v2 design system has different values,
+  overwrite them here and nothing else needs to change.
+
+  Two atmospheres instead of light/dark mode:
+    dawn  = after Fajr and the daytime
+    night = after Isha
+  The page picks one from the visitor's local hour, and they can switch it.
+*/
+
+:root {
+  /* Base colors, named after their source */
+  --lapis: #1f3580;          /* calligraphy blue, lapis lazuli of mushaf illumination */
+  --lapis-mist: #4b5578;     /* quiet ink at dawn */
+  --cinnabar: #b03a22;       /* vermilion accent at dawn */
+  --parchment: #f7f1e6;      /* page at dawn */
+  --parchment-raised: #fffbf3;
+  --fajr-peach: #f2d3b8;     /* sky wash at dawn */
+  --isha-ink: #0a1230;       /* page at night */
+  --isha-raised: #111b42;
+  --gold-leaf: #d8bd84;      /* calligraphy at night */
+  --coral-dusk: #ef8a6c;     /* accent at night */
+  --moon-mist: #a9b2d0;      /* quiet ink at night */
+  --lamp-white: #eee6d0;     /* body ink at night */
+
+  /* Type */
+  --font-latin: "Alegreya Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "Amiri", "Scheherazade New", "Noto Naskh Arabic", serif;
+
+  /* Spacing, 4/8 scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-24: 96px;
+
+  /* Radius scale: small controls, fields, the phone, pills */
+  --r-1: 4px;
+  --r-2: 10px;
+  --r-3: 28px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-1: 150ms;
+  --dur-atmo: 400ms;
+  --dur-draw: 1600ms;
+}
+
+/* Night is the default so the page is correct before any script runs. */
+:root,
+[data-atmosphere="night"] {
+  color-scheme: dark;
+  --surface: var(--isha-ink);
+  --surface-raised: var(--isha-raised);
+  --ink: var(--lamp-white);
+  --ink-quiet: var(--moon-mist);
+  --line: rgba(216, 189, 132, 0.2);
+  --line-strong: rgba(216, 189, 132, 0.55);
+  --accent: var(--coral-dusk);
+  --calligraphy: var(--gold-leaf);
+  --focus: var(--gold-leaf);
+  --btn-bg: var(--gold-leaf);
+  --btn-ink: var(--isha-ink);
+  --arch-a: var(--gold-leaf);
+  --arch-b: var(--coral-dusk);
+  --glow: rgba(216, 189, 132, 0.14);
+  --stars:
+    radial-gradient(1.5px 1.5px at 8% 14%, rgba(216, 189, 132, 0.9) 60%, transparent 64%),
+    radial-gradient(1px 1px at 17% 38%, rgba(216, 189, 132, 0.6) 60%, transparent 64%),
+    radial-gradient(1.5px 1.5px at 29% 9%, rgba(216, 189, 132, 0.7) 60%, transparent 64%),
+    radial-gradient(1px 1px at 41% 27%, rgba(238, 230, 208, 0.7) 60%, transparent 64%),
+    radial-gradient(2px 2px at 52% 6%, rgba(216, 189, 132, 0.85) 60%, transparent 64%),
+    radial-gradient(1px 1px at 63% 33%, rgba(216, 189, 132, 0.55) 60%, transparent 64%),
+    radial-gradient(1.5px 1.5px at 74% 12%, rgba(238, 230, 208, 0.75) 60%, transparent 64%),
+    radial-gradient(1px 1px at 86% 24%, rgba(216, 189, 132, 0.65) 60%, transparent 64%),
+    radial-gradient(1.5px 1.5px at 93% 8%, rgba(216, 189, 132, 0.8) 60%, transparent 64%),
+    radial-gradient(1px 1px at 5% 62%, rgba(216, 189, 132, 0.45) 60%, transparent 64%),
+    radial-gradient(1px 1px at 95% 58%, rgba(216, 189, 132, 0.5) 60%, transparent 64%),
+    radial-gradient(1px 1px at 22% 78%, rgba(238, 230, 208, 0.4) 60%, transparent 64%);
+  --wash:
+    radial-gradient(60% 55% at 82% 28%, rgba(31, 53, 128, 0.55), transparent 70%),
+    radial-gradient(50% 40% at 12% 96%, rgba(239, 138, 108, 0.12), transparent 70%);
+}
+
+[data-atmosphere="dawn"] {
+  color-scheme: light;
+  --surface: var(--parchment);
+  --surface-raised: var(--parchment-raised);
+  --ink: var(--lapis);
+  --ink-quiet: var(--lapis-mist);
+  --line: rgba(31, 53, 128, 0.16);
+  --line-strong: rgba(31, 53, 128, 0.5);
+  --accent: var(--cinnabar);
+  --calligraphy: var(--lapis);
+  --focus: var(--lapis);
+  --btn-bg: var(--lapis);
+  --btn-ink: var(--parchment);
+  --arch-a: var(--lapis);
+  --arch-b: var(--cinnabar);
+  --glow: rgba(232, 200, 138, 0.4);
+  --stars: linear-gradient(transparent, transparent);
+  --wash: radial-gradient(75% 55% at 50% 108%, var(--fajr-peach), transparent 72%);
+}
