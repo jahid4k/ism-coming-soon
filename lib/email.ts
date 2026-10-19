@@ -1,14 +1,14 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { site } from "./site";
 
 /**
  * Sends the welcome email. Never throws: a failed email must not break sign-up.
- * Skipped when RESEND_API_KEY or RESEND_FROM is empty (e.g. before a domain is verified).
+ * Sent through Gmail SMTP. Skipped when GMAIL_USER or GMAIL_APP_PASSWORD is empty.
  */
 export async function sendWelcome(to: string, unsubToken: string): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM;
-  if (!key || !from) return;
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!user || !pass) return;
 
   const unsubUrl = `${site.url}/api/unsubscribe?token=${unsubToken}`;
 
@@ -33,9 +33,14 @@ export async function sendWelcome(to: string, unsubToken: string): Promise<void>
 </body></html>`;
 
   try {
-    const resend = new Resend(key);
-    const { error } = await resend.emails.send({
-      from,
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user, pass },
+    });
+    await transporter.sendMail({
+      from: { name: site.name, address: user },
       to,
       subject: "You're on the list for 99 Names",
       text,
@@ -45,8 +50,7 @@ export async function sendWelcome(to: string, unsubToken: string): Promise<void>
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
-    if (error) console.error("[resend]", error);
   } catch (err) {
-    console.error("[resend]", err);
+    console.error("[email]", err);
   }
 }
