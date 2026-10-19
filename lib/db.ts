@@ -1,31 +1,59 @@
-import { neon } from "@neondatabase/serverless";
+import { MongoClient, type Collection } from "mongodb";
 
-export function getSql() {
+export type Subscriber = {
+  email: string;
+  unsubToken: string;
+  ipHash: string;
+  createdAt: Date;
+  unsubscribedAt: Date | null;
+  notifiedAt: Date | null;
+};
+
+// Reused across hot reloads in dev and across requests on a warm serverless instance.
+const globalForMongo = globalThis as unknown as { _mongoClient?: Promise<MongoClient> };
+
+function getClient(): Promise<MongoClient> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
-  return neon(url);
+
+  // Only the scheme is echoed back, never the credentials.
+  if (!/^mongodb(\+srv)?:\/\//.test(url)) {
+    const scheme = url.match(/^([a-z][a-z0-9+.-]*):/i)?.[1] ?? "(none)";
+    throw new Error(
+      `DATABASE_URL must be a MongoDB connection string starting with mongodb:// or mongodb+srv://, ` +
+        `but it starts with "${scheme}://".`,
+    );
+  }
+
+  globalForMongo._mongoClient ??= new MongoClient(url, { serverSelectionTimeoutMS: 8000 })
+    .connect()
+    .catch((err) => {
+      globalForMongo._mongoClient = undefined;
+      throw err;
+    });
+  return globalForMongo._mongoClient;
 }
 
-// Creates the table on first use, once per server instance. No migration step needed.
-let schemaReady: Promise<void> | null = null;
+// Creates the indexes on first use, once per server instance. No migration step needed.
+let indexesReady: Promise<void> | null = null;
 
-export function ensureSchema(): Promise<void> {
-  schemaReady ??= (async () => {
-    const sql = getSql();
-    await sql`
-      create table if not exists subscribers (
-        id bigserial primary key,
-        email text not null unique,
-        unsub_token text not null unique,
-        ip_hash text,
-        created_at timestamptz not null default now(),
-        unsubscribed_at timestamptz,
-        notified_at timestamptz
-      )`;
-    await sql`create index if not exists subscribers_ip_idx on subscribers (ip_hash, created_at)`;
+/** The subscribers collection, with its indexes in place. */
+export async function getSubscribers(): Promise<Collection<Subscriber>> {
+  const client = await getClient();
+  const col = client
+    .db(process.env.DATABASE_NAME || "ism_coming_soon")
+    .collection<Subscriber>("subscribers");
+
+  indexesReady ??= (async () => {
+    await col.createIndexes([
+      { key: { email: 1 }, unique: true },
+      { key: { unsubToken: 1 }, unique: true },
+      { key: { ipHash: 1, createdAt: 1 } },
+    ]);
   })().catch((err) => {
-    schemaReady = null;
+    indexesReady = null;
     throw err;
   });
-  return schemaReady;
+  await indexesReady;
+  return col;
 }

@@ -1,6 +1,6 @@
 # 99 Names: coming-soon page
 
-Single-page Next.js site with an email waitlist. Free stack: Vercel (hosting), Neon Postgres (emails), Gmail SMTP (welcome email).
+Single-page Next.js site with an email waitlist. Free stack: Vercel (hosting), MongoDB Atlas (emails), Gmail SMTP (welcome email).
 
 ## Run locally
 
@@ -12,7 +12,7 @@ npm run dev
 
 ## Set up the free services
 
-1. **Neon.** Create a project at neon.com, copy the connection string into `DATABASE_URL`. (On Vercel you can instead add Neon from the Storage / Marketplace tab and it sets `DATABASE_URL` for you.) The `subscribers` table is created automatically on the first sign-up.
+1. **MongoDB Atlas.** Create a free cluster, add a database user, and copy the connection string (`mongodb+srv://...`) into `DATABASE_URL`. Under Network Access, allow `0.0.0.0/0`, because Vercel's IP addresses change. Data goes in the `ism_coming_soon` database (override with `DATABASE_NAME`). The `subscribers` collection and its indexes are created automatically on the first sign-up.
 2. **Gmail.** Turn on 2-Step Verification for the Gmail account, create an App Password at myaccount.google.com/apppasswords, and set `GMAIL_USER` (the address) and `GMAIL_APP_PASSWORD`. Leave them empty to skip the welcome email: sign-ups are still saved. Gmail caps a personal account at about 500 emails a day and always sends from the authenticated address.
 3. **Vercel.** Import the repo, add the env vars from `.env.example`, deploy. Set `NEXT_PUBLIC_SITE_URL` to your final domain so the unsubscribe link is correct.
 
@@ -30,10 +30,10 @@ npm run dev
 
 ## Reading the list
 
-In the Neon SQL editor:
+In Atlas (Browse Collections, filter) or mongosh, on the `subscribers` collection:
 
-```sql
-select email, created_at from subscribers where unsubscribed_at is null order by created_at;
+```js
+db.subscribers.find({ unsubscribedAt: null }, { email: 1, createdAt: 1 }).sort({ createdAt: 1 })
 ```
 
-When you send the launch email, skip anyone with `unsubscribed_at` set and stamp `notified_at` after sending. A personal Gmail account allows about 500 emails a day, so a larger list needs sending in daily batches.
+When you send the launch email, skip anyone with `unsubscribedAt` set and stamp `notifiedAt` after sending. A personal Gmail account allows about 500 emails a day, so a larger list needs sending in daily batches.

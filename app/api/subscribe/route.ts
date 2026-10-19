@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { after, NextResponse } from "next/server";
-import { ensureSchema, getSql } from "@/lib/db";
+import { getSubscribers } from "@/lib/db";
 import { sendWelcome } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -32,28 +32,42 @@ export async function POST(req: Request) {
     .digest("hex");
 
   try {
-    await ensureSchema();
-    const sql = getSql();
+    const subscribers = await getSubscribers();
 
-    const recent = await sql`
-      select count(*)::int as n from subscribers
-      where ip_hash = ${ipHash} and created_at > now() - interval '1 hour'`;
-    if ((recent[0]?.n as number) >= MAX_PER_HOUR_PER_IP) {
+    const recent = await subscribers.countDocuments({
+      ipHash,
+      createdAt: { $gt: new Date(Date.now() - 60 * 60 * 1000) },
+    });
+    if (recent >= MAX_PER_HOUR_PER_IP) {
       return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
     }
 
-    // New address: insert. Previously unsubscribed address: re-enable. Already active: no row returned.
+    // New address: insert. Previously unsubscribed address: re-enable. Already active: nothing, no email.
+    let unsubToken: string | null = null;
     const token = randomBytes(16).toString("hex");
-    const rows = await sql`
-      insert into subscribers (email, ip_hash, unsub_token)
-      values (${email}, ${ipHash}, ${token})
-      on conflict (email) do update set unsubscribed_at = null
-        where subscribers.unsubscribed_at is not null
-      returning unsub_token`;
+    try {
+      await subscribers.insertOne({
+        email,
+        unsubToken: token,
+        ipHash,
+        createdAt: new Date(),
+        unsubscribedAt: null,
+        notifiedAt: null,
+      });
+      unsubToken = token;
+    } catch (err) {
+      if ((err as { code?: number }).code !== 11000) throw err; // 11000 = email already on the list
+      const reenabled = await subscribers.findOneAndUpdate(
+        { email, unsubscribedAt: { $type: "date" } },
+        { $set: { unsubscribedAt: null } },
+        { returnDocument: "after" },
+      );
+      unsubToken = reenabled?.unsubToken ?? null;
+    }
 
-    if (rows.length > 0) {
-      const unsubToken = rows[0].unsub_token as string;
-      after(() => sendWelcome(email, unsubToken));
+    if (unsubToken) {
+      const t = unsubToken;
+      after(() => sendWelcome(email, t));
     }
 
     // Same answer whether or not the address was already on the list.

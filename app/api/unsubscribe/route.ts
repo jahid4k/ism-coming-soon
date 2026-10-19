@@ -1,4 +1,4 @@
-import { ensureSchema, getSql } from "@/lib/db";
+import { getSubscribers } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -40,10 +40,11 @@ export async function POST(req: Request) {
   const token = readToken(req);
   if (!token) return page("Link not valid", "<p>This unsubscribe link isn't valid.</p>", 400);
   try {
-    await ensureSchema();
-    const sql = getSql();
-    await sql`update subscribers set unsubscribed_at = now()
-              where unsub_token = ${token} and unsubscribed_at is null`;
+    const subscribers = await getSubscribers();
+    await subscribers.updateOne(
+      { unsubToken: token, unsubscribedAt: null },
+      { $set: { unsubscribedAt: new Date() } },
+    );
     return page("You're unsubscribed", "<p>You won't get any more emails from 99 Names.</p>");
   } catch (err) {
     console.error("[unsubscribe]", err);
