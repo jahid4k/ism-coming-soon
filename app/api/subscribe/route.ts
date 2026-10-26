@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSubscribers } from "@/lib/db";
-import { emailConfigured, sendWelcome } from "@/lib/email";
+import { sendWelcome } from "@/lib/email";
 import { bookUrl } from "@/lib/token";
 
 export const runtime = "nodejs";
+export const maxDuration = 30; // the request waits for Gmail to accept the message
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_PER_HOUR_PER_IP = 5;
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
   // Honeypot: real people never see this field. Bots fill it; we pretend it worked (no book link).
   if (typeof body.website === "string" && body.website.length > 0) {
-    return NextResponse.json({ ok: true, download: "", emailed: false });
+    return NextResponse.json({ ok: true, status: "emailed", download: "" });
   }
 
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -43,10 +44,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
     }
 
-    // New address: insert. Previously unsubscribed address: re-enable. Already active: leave as is.
+    // New address: insert. Previously unsubscribed address: re-enable. Already active: no email, book only.
+    // `undo` puts the list back as it was if the email can't be sent, so a retry starts clean.
     let id: string;
     let unsubToken: string;
-    let isFresh = true;
+    let undo: () => Promise<unknown>;
     const token = randomBytes(16).toString("hex");
     try {
       const { insertedId } = await subscribers.insertOne({
@@ -59,26 +61,41 @@ export async function POST(req: Request) {
       });
       id = insertedId.toHexString();
       unsubToken = token;
+      undo = () => subscribers.deleteOne({ _id: insertedId });
     } catch (err) {
       if ((err as { code?: number }).code !== 11000) throw err; // 11000 = email already on the list
-      const reenabled = await subscribers.findOneAndUpdate(
+      const before = await subscribers.findOneAndUpdate(
         { email, unsubscribedAt: { $type: "date" } },
         { $set: { unsubscribedAt: null } },
-        { returnDocument: "after" },
+        { returnDocument: "before" },
       );
-      const existing = reenabled ?? (await subscribers.findOne({ email }));
-      if (!existing) throw new Error("subscriber vanished after duplicate-key error");
-      id = existing._id.toHexString();
-      unsubToken = existing.unsubToken;
-      isFresh = reenabled !== null;
+      if (!before) {
+        // Already on the list: no second email (so nobody can use the form to spam an address), but the
+        // book is still on the page.
+        const existing = await subscribers.findOne({ email });
+        if (!existing) throw new Error("subscriber vanished after duplicate-key error");
+        return NextResponse.json({
+          ok: true,
+          status: "already",
+          download: bookUrl(existing._id.toHexString()),
+        });
+      }
+      id = before._id.toHexString();
+      unsubToken = before.unsubToken;
+      undo = () =>
+        subscribers.updateOne({ _id: before._id }, { $set: { unsubscribedAt: before.unsubscribedAt } });
     }
 
-    // Everyone gets the book on the page, new or returning. Only new/re-enabled people get the email,
-    // so typing someone else's address can't be used to spam them.
-    const willEmail = isFresh && emailConfigured();
-    if (willEmail) after(() => sendWelcome(email, id, unsubToken));
+    // A new or re-enabled address only gets the book once its email has gone out. If the send fails, undo
+    // the sign-up and hold the book back; otherwise a retry would look like "already on the list" and
+    // skip the email.
+    const sent = await sendWelcome(email, unsubToken);
+    if (!sent) {
+      await undo().catch((err) => console.error("[subscribe] rollback failed", err));
+      return NextResponse.json({ ok: false, error: "email_failed" }, { status: 502 });
+    }
 
-    return NextResponse.json({ ok: true, download: bookUrl(id), emailed: willEmail });
+    return NextResponse.json({ ok: true, status: "emailed", download: bookUrl(id) });
   } catch (err) {
     console.error("[subscribe]", err);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });

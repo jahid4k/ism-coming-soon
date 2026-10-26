@@ -13,7 +13,7 @@ npm run dev
 ## Set up the free services
 
 1. **MongoDB Atlas.** Create a free cluster, add a database user, and copy the connection string (`mongodb+srv://...`) into `DATABASE_URL`. Under Network Access, allow `0.0.0.0/0`, because Vercel's IP addresses change. Data goes in the `ism_coming_soon` database (override with `DATABASE_NAME`). The `subscribers` collection and its indexes are created automatically on the first sign-up.
-2. **Gmail.** Turn on 2-Step Verification for the Gmail account, create an App Password at myaccount.google.com/apppasswords, and set `GMAIL_USER` (the address) and `GMAIL_APP_PASSWORD`. Leave them empty to skip the welcome email: sign-ups are still saved. Gmail caps a personal account at about 500 emails a day and always sends from the authenticated address.
+2. **Gmail.** Turn on 2-Step Verification for the Gmail account, create an App Password at myaccount.google.com/apppasswords, and set `GMAIL_USER` (the address) and `GMAIL_APP_PASSWORD`. They are required: a new sign-up only gets the book once its welcome email has been sent, so without them new sign-ups fail. Gmail caps a personal account at about 500 emails a day and always sends from the authenticated address.
 3. **Vercel.** Import the repo, add the env vars from `.env.example`, deploy. Set `NEXT_PUBLIC_SITE_URL` to your final domain so the unsubscribe link is correct.
 
 ## Where things are

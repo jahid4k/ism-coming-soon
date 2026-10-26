@@ -5,7 +5,7 @@ import { useId, useState, type FormEvent } from "react";
 type State =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "done"; download: string; emailed: boolean }
+  | { kind: "done"; status: "emailed" | "already"; download: string }
   | { kind: "error"; message: string };
 
 export function WaitlistForm() {
@@ -27,17 +27,27 @@ export function WaitlistForm() {
       const json = (await res.json().catch(() => null)) as {
         ok?: boolean;
         error?: string;
+        status?: "emailed" | "already";
         download?: string;
-        emailed?: boolean;
       } | null;
 
       if (res.ok && json?.ok) {
-        setState({ kind: "done", download: json.download ?? "", emailed: Boolean(json.emailed) });
+        setState({
+          kind: "done",
+          status: json.status === "already" ? "already" : "emailed",
+          download: json.download ?? "",
+        });
         return;
       }
 
       if (json?.error === "invalid_email") {
         setState({ kind: "error", message: "That email doesn't look right. Check it and try again." });
+      } else if (json?.error === "email_failed") {
+        setState({
+          kind: "error",
+          message:
+            "We couldn't send the email, so something is wrong on our side. Check the address and try again in a minute.",
+        });
       } else if (res.status === 429) {
         setState({ kind: "error", message: "Too many tries from this network. Please try again later." });
       } else {
@@ -52,7 +62,7 @@ export function WaitlistForm() {
     return (
       <div className="signup">
         <div className="done" role="status">
-          <h3>You're on the list.</h3>
+          <h3>{state.status === "already" ? "You're already on the list." : "You're on the list."}</h3>
           {state.download ? (
             <>
               <p>Your free book is ready.</p>
@@ -60,9 +70,9 @@ export function WaitlistForm() {
                 Download the book
               </a>
               <p className="caption">
-                {state.emailed
-                  ? "We've also emailed you the link, so you can open it again later. Check spam if you don't see it."
-                  : "Save the file somewhere safe. We'll email you the day the app is out."}
+                {state.status === "already"
+                  ? "This address is already subscribed, so we haven't sent another email. We'll email you the day the app is out."
+                  : "We've also sent you a welcome email. Check spam if you don't see it."}
               </p>
             </>
           ) : (
