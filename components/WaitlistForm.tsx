@@ -5,7 +5,7 @@ import { useId, useState, type FormEvent } from "react";
 type State =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "done" }
+  | { kind: "done"; download: string; emailed: boolean }
   | { kind: "error"; message: string };
 
 export function WaitlistForm() {
@@ -24,12 +24,18 @@ export function WaitlistForm() {
         body: JSON.stringify({ email: data.get("email"), website: data.get("website") }),
       });
 
-      if (res.ok) {
-        setState({ kind: "done" });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        download?: string;
+        emailed?: boolean;
+      } | null;
+
+      if (res.ok && json?.ok) {
+        setState({ kind: "done", download: json.download ?? "", emailed: Boolean(json.emailed) });
         return;
       }
 
-      const json = (await res.json().catch(() => null)) as { error?: string } | null;
       if (json?.error === "invalid_email") {
         setState({ kind: "error", message: "That email doesn't look right. Check it and try again." });
       } else if (res.status === 429) {
@@ -46,8 +52,22 @@ export function WaitlistForm() {
     return (
       <div className="signup">
         <div className="done" role="status">
-          <strong>You're on the list.</strong>
-          <span className="caption">We'll email you the day 99 Names is out.</span>
+          <h3>You're on the list.</h3>
+          {state.download ? (
+            <>
+              <p>Your free book is ready.</p>
+              <a className="btn" href={state.download} target="_blank" rel="noopener noreferrer">
+                Download the book
+              </a>
+              <p className="caption">
+                {state.emailed
+                  ? "We've also emailed you the link, so you can open it again later. Check spam if you don't see it."
+                  : "Save the file somewhere safe. We'll email you the day the app is out."}
+              </p>
+            </>
+          ) : (
+            <p className="caption">We'll email you the day the app is out.</p>
+          )}
         </div>
       </div>
     );
@@ -56,7 +76,7 @@ export function WaitlistForm() {
   const loading = state.kind === "loading";
 
   return (
-    <form className="signup" onSubmit={onSubmit} noValidate={false}>
+    <form className="signup" onSubmit={onSubmit}>
       <label htmlFor={`${id}-email`} className="sr-only">
         Email address
       </label>
@@ -74,7 +94,7 @@ export function WaitlistForm() {
           disabled={loading}
         />
         <button className="btn" type="submit" disabled={loading}>
-          {loading ? "Adding you…" : "Notify me when it's out"}
+          {loading ? "Adding you…" : "Send me the free book"}
         </button>
       </div>
       <input
@@ -85,14 +105,10 @@ export function WaitlistForm() {
         autoComplete="off"
         aria-hidden="true"
       />
-      <p className="status" role="status" data-kind={state.kind === "error" ? "error" : undefined}>
-        {state.kind === "error" ? (
-          state.message
-        ) : (
-          <span className="caption">
-            We'll only use your email to tell you when the app is ready. Unsubscribe any time.
-          </span>
-        )}
+      <p className="status caption" role="status" data-kind={state.kind === "error" ? "error" : undefined}>
+        {state.kind === "error"
+          ? state.message
+          : "Get the book now, and we'll tell you the day the app is out. Unsubscribe any time."}
       </p>
     </form>
   );

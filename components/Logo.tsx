@@ -1,16 +1,18 @@
+import { Crescent } from "./Crescent";
+
 /**
- * Placeholder lockup built from live text: اسم (Amiri Bold) plus the dot, then the wordmark.
- * Swap for the real SVG from your logo kit when you want pixel-exact output.
+ * Tadabbur Studio lockup, built from live text: the crescent plus تَدَبُّر in Amiri Bold.
+ * Swap for an exported SVG from the canvas if you want it pixel-exact.
  */
 export function Logo() {
   return (
-    <span className="logo" role="img" aria-label="99 Names">
-      <span className="logo-mark ar" lang="ar" dir="rtl" aria-hidden="true">
-        اسم
-        <i className="logo-dot" />
+    <span className="logo" role="img" aria-label="Tadabbur Studio">
+      <Crescent size={28} />
+      <span className="ar" lang="ar" dir="rtl" aria-hidden="true">
+        تَدَبُّر
       </span>
       <span className="logo-word" aria-hidden="true">
-        99 Names
+        Studio
       </span>
     </span>
   );

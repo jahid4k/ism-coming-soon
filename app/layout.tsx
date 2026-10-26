@@ -4,11 +4,16 @@ import "@fontsource/alegreya-sans/500.css";
 import "@fontsource/alegreya-sans/700.css";
 import "@fontsource/amiri/400.css";
 import "@fontsource/amiri/700.css";
+import "@fontsource/cormorant-garamond/600.css";
+import "@fontsource/cormorant-garamond/600-italic.css";
+import "@fontsource/cormorant-garamond/700.css";
+import "@fontsource/plus-jakarta-sans/600.css";
+import "@fontsource/plus-jakarta-sans/700.css";
 import "./tokens.css";
 import "./globals.css";
 import { site } from "@/lib/site";
 
-const title = `${site.name}: coming soon`;
+const title = `${site.name}: the 99 Names app, coming soon`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -18,11 +23,11 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title, description: site.description },
 };
 
-export const viewport: Viewport = { themeColor: "#0A1230" };
+export const viewport: Viewport = { themeColor: "#0B1026" };
 
 // Runs before first paint so the page never flashes the wrong atmosphere.
 // Dawn from 06:00 to 18:00 local time, night otherwise, unless the visitor chose one.
-const atmosphereScript = `(function(){try{var s=localStorage.getItem("atmosphere");var h=new Date().getHours();var a=(s==="dawn"||s==="night")?s:(h>=6&&h<18?"dawn":"night");document.documentElement.setAttribute("data-atmosphere",a);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",a==="dawn"?"#F7F1E6":"#0A1230")}catch(e){}})()`;
+const atmosphereScript = `(function(){try{var s=localStorage.getItem("atmosphere");var h=new Date().getHours();var a=(s==="dawn"||s==="night")?s:(h>=6&&h<18?"dawn":"night");document.documentElement.setAttribute("data-atmosphere",a);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",a==="dawn"?"#F7F1EA":"#0B1026")}catch(e){}})()`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

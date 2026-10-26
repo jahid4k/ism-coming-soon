@@ -16,7 +16,7 @@ export function AtmosphereToggle() {
     document.documentElement.setAttribute("data-atmosphere", a);
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", a === "dawn" ? "#F7F1E6" : "#0A1230");
+      ?.setAttribute("content", a === "dawn" ? "#F7F1EA" : "#0B1026");
     try {
       localStorage.setItem("atmosphere", a);
     } catch {}
